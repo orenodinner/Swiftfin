@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Defaults
@@ -19,7 +19,7 @@ struct HomeView: View {
     @StateObject
     private var viewModel = HomeViewModel()
 
-    @Default(.Customization.showRecentlyAdded)
+    @Default(.Customization.Home.showRecentlyAdded)
     private var showRecentlyAdded
 
     @ViewBuilder
@@ -50,19 +50,23 @@ struct HomeView: View {
     }
 
     var body: some View {
-        WrappedView {
-            Group {
-                switch viewModel.state {
-                case .content:
-                    contentView
-                case let .error(error):
-                    Text(error.localizedDescription)
-                case .initial, .refreshing:
-                    ProgressView()
-                }
+        ZStack {
+            // This keeps the ErrorView vertically aligned with the PagingLibraryView
+            Color.clear
+
+            switch viewModel.state {
+            case .content:
+                contentView
+            case let .error(error):
+                ErrorView(error: error)
+                    .onRetry {
+                        viewModel.send(.refresh)
+                    }
+            case .initial, .refreshing:
+                ProgressView()
             }
-            .transition(.opacity.animation(.linear(duration: 0.2)))
         }
+        .animation(.linear(duration: 0.1), value: viewModel.state)
         .onFirstAppear {
             viewModel.send(.refresh)
         }

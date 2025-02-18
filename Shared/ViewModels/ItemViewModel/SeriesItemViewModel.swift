@@ -3,15 +3,15 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Combine
 import Defaults
 import Factory
 import Foundation
+import IdentifiedCollections
 import JellyfinAPI
-import OrderedCollections
 
 // TODO: care for one long episodes list?
 //       - after SeasonItemViewModel is bidirectional
@@ -19,7 +19,7 @@ import OrderedCollections
 final class SeriesItemViewModel: ItemViewModel {
 
     @Published
-    var seasons: OrderedSet<SeasonItemViewModel> = []
+    var seasons: IdentifiedArrayOf<SeasonItemViewModel> = []
 
     override func onRefresh() async throws {
 

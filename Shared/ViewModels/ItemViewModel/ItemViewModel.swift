@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Combine
@@ -14,6 +14,8 @@ import JellyfinAPI
 import OrderedCollections
 import UIKit
 
+// TODO: come up with a cleaner, more defined way for item update notifications
+
 class ItemViewModel: ViewModel, Stateful {
 
     // MARK: Action
@@ -22,6 +24,7 @@ class ItemViewModel: ViewModel, Stateful {
         case backgroundRefresh
         case error(JellyfinAPIError)
         case refresh
+        case replace(BaseItemDto)
         case toggleIsFavorite
         case toggleIsPlayed
     }
@@ -88,20 +91,24 @@ class ItemViewModel: ViewModel, Stateful {
         self.item = item
         super.init()
 
-        // TODO: should replace with a more robust "PlaybackManager"
-        Notifications[.itemMetadataDidChange].publisher
-            .sink { [weak self] notification in
+        Notifications[.itemShouldRefreshMetadata]
+            .publisher
+            .sink { itemID in
+                guard itemID == self.item.id else { return }
 
-                guard let userInfo = notification.object as? [String: String] else { return }
+                Task {
+                    await self.send(.backgroundRefresh)
+                }
+            }
+            .store(in: &cancellables)
 
-                if let itemID = userInfo["itemID"], itemID == item.id {
-                    Task { [weak self] in
-                        await self?.send(.backgroundRefresh)
-                    }
-                } else if let seriesID = userInfo["seriesID"], seriesID == item.id {
-                    Task { [weak self] in
-                        await self?.send(.backgroundRefresh)
-                    }
+        Notifications[.itemMetadataDidChange]
+            .publisher
+            .sink { newItem in
+                guard let newItemID = newItem.id, newItemID == self.item.id else { return }
+
+                Task {
+                    await self.send(.replace(newItem))
                 }
             }
             .store(in: &cancellables)
@@ -136,9 +143,16 @@ class ItemViewModel: ViewModel, Stateful {
 
                     await MainActor.run {
                         self.backgroundStates.remove(.refresh)
-                        self.item = results.fullItem
+
+                        // see TODO, as the item will be set in
+                        // itemMetadataDidChange notification but
+                        // is a bit redundant
+//                        self.item = results.fullItem
+
                         self.similarItems = results.similarItems
                         self.specialFeatures = results.specialFeatures
+
+                        Notifications[.itemMetadataDidChange].post(results.fullItem)
                     }
                 } catch {
                     guard !Task.isCancelled else { return }
@@ -195,6 +209,22 @@ class ItemViewModel: ViewModel, Stateful {
             .asAnyCancellable()
 
             return .refreshing
+        case let .replace(newItem):
+
+            backgroundStates.append(.refresh)
+
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    await MainActor.run {
+                        self.backgroundStates.remove(.refresh)
+                        self.item = newItem
+                    }
+                }
+            }
+            .store(in: &cancellables)
+
+            return state
         case .toggleIsFavorite:
 
             toggleIsFavoriteTask?.cancel()
@@ -294,6 +324,8 @@ class ItemViewModel: ViewModel, Stateful {
 
     private func setIsPlayed(_ isPlayed: Bool) async throws {
 
+        guard let itemID = item.id else { return }
+
         let request: Request<UserItemDataDto>
 
         if isPlayed {
@@ -309,9 +341,7 @@ class ItemViewModel: ViewModel, Stateful {
         }
 
         let _ = try await userSession.client.send(request)
-
-        let ids = ["itemID": item.id]
-        Notifications[.itemMetadataDidChange].post(object: ids)
+        Notifications[.itemShouldRefreshMetadata].post(itemID)
     }
 
     private func setIsFavorite(_ isFavorite: Bool) async throws {

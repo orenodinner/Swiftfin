@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import CollectionVGrid
@@ -17,38 +17,80 @@ import SwiftUI
 
 struct SelectUserView: View {
 
+    // MARK: - User Grid Item Enum
+
     private enum UserGridItem: Hashable {
         case user(UserState, server: ServerState)
         case addUser
     }
 
+    // MARK: - Defaults
+
     @Default(.selectUserServerSelection)
     private var serverSelection
+    @Default(.selectUserUseSplashscreen)
+    private var selectUserUseSplashscreen
+
+    // MARK: - Environment Variable
+
+    @Environment(\.colorScheme)
+    private var colorScheme
+
+    // MARK: - State & Environment Objects
 
     @EnvironmentObject
     private var router: SelectUserCoordinator.Router
 
+    @StateObject
+    private var viewModel = SelectUserViewModel()
+
+    // MARK: - Select User Variables
+
     @State
     private var contentSize: CGSize = .zero
-    @State
-    private var error: Error? = nil
     @State
     private var gridItems: OrderedSet<UserGridItem> = []
     @State
     private var gridItemSize: CGSize = .zero
     @State
-    private var isPresentingError: Bool = false
-    @State
-    private var isPresentingServers: Bool = false
+    private var isEditingUsers: Bool = false
     @State
     private var padGridItemColumnCount: Int = 1
     @State
+    private var pin: String = ""
+    @State
     private var scrollViewOffset: CGFloat = 0
+    @State
+    private var selectedUsers: Set<UserState> = []
     @State
     private var splashScreenImageSource: ImageSource? = nil
 
-    @StateObject
-    private var viewModel = SelectUserViewModel()
+    private var users: [UserState] {
+        gridItems.compactMap { item in
+            switch item {
+            case let .user(user, _):
+                return user
+            default:
+                return nil
+            }
+        }
+    }
+
+    // MARK: - Dialog States
+
+    @State
+    private var isPresentingConfirmDeleteUsers = false
+    @State
+    private var isPresentingServers: Bool = false
+    @State
+    private var isPresentingLocalPin: Bool = false
+
+    // MARK: - Error State
+
+    @State
+    private var error: Error? = nil
+
+    // MARK: - Selected Server
 
     private var selectedServer: ServerState? {
         if case let SelectUserServerSelection.server(id: id) = serverSelection,
@@ -59,6 +101,8 @@ struct SelectUserView: View {
 
         return nil
     }
+
+    // MARK: - Make Grid Items
 
     private func makeGridItems(for serverSelection: SelectUserServerSelection) -> OrderedSet<UserGridItem> {
         switch serverSelection {
@@ -89,6 +133,8 @@ struct SelectUserView: View {
         }
     }
 
+    // MARK: - Make Splash Screen Image Source
+
     // For all server selection, .all is random
     private func makeSplashScreenImageSource(
         serverSelection: SelectUserServerSelection,
@@ -112,7 +158,7 @@ struct SelectUserView: View {
         }
     }
 
-    // MARK: grid
+    // MARK: - Grid Item Offset
 
     private func gridItemOffset(index: Int) -> CGFloat {
         let lastRowIndices = (gridItems.count - gridItems.count % padGridItemColumnCount ..< gridItems.count)
@@ -122,6 +168,30 @@ struct SelectUserView: View {
         let lastRowMissing = padGridItemColumnCount - gridItems.count % padGridItemColumnCount
         return CGFloat(lastRowMissing) * (gridItemSize.width + EdgeInsets.edgePadding) / 2
     }
+
+    // MARK: - Select User(s)
+
+    private func select(user: UserState, needsPin: Bool = true) {
+        Task { @MainActor in
+            selectedUsers.insert(user)
+
+            switch user.accessPolicy {
+            case .requireDeviceAuthentication:
+                // Do nothing, no device authentication on tvOS
+                break
+            case .requirePin:
+                if needsPin {
+                    isPresentingLocalPin = true
+                    return
+                }
+            case .none: ()
+            }
+
+            viewModel.send(.signIn(user, pin: pin))
+        }
+    }
+
+    // MARK: - Grid Content View
 
     @ViewBuilder
     private var gridContentView: some View {
@@ -144,6 +214,8 @@ struct SelectUserView: View {
         }
     }
 
+    // MARK: - Grid Content View
+
     @ViewBuilder
     private func gridItemView(for item: UserGridItem) -> some View {
         switch item {
@@ -153,17 +225,17 @@ struct SelectUserView: View {
                 server: server,
                 showServer: serverSelection == .all
             ) {
-//                if isEditingUsers {
-//                    selectedUsers.toggle(value: user)
-//                } else {
-                viewModel.send(.signIn(user, pin: ""))
-//                }
+                if isEditingUsers {
+                    selectedUsers.toggle(value: user)
+                } else {
+                    select(user: user)
+                }
             } onDelete: {
-//                selectedUsers.insert(user)
-//                isPresentingConfirmDeleteUsers = true
+                selectedUsers.insert(user)
+                isPresentingConfirmDeleteUsers = true
             }
-//            .environment(\.isEditing, isEditingUsers)
-//            .environment(\.isSelected, selectedUsers.contains(user))
+            .environment(\.isEditing, isEditingUsers)
+            .environment(\.isSelected, selectedUsers.contains(user))
         case .addUser:
             AddUserButton(
                 serverSelection: $serverSelection,
@@ -171,10 +243,11 @@ struct SelectUserView: View {
             ) { server in
                 router.route(to: \.userSignIn, server)
             }
+            .environment(\.isEnabled, !isEditingUsers)
         }
     }
 
-    // MARK: userView
+    // MARK: - User View
 
     @ViewBuilder
     private var userView: some View {
@@ -189,24 +262,34 @@ struct SelectUserView: View {
                         .frame(height: 100)
 
                     gridContentView
+                        .focusSection()
                 }
                 .scrollIfLargerThanContainer(padding: 100)
                 .scrollViewOffset($scrollViewOffset)
             }
 
-            HStack {
-                ServerSelectionMenu(
-                    selection: $serverSelection,
-                    viewModel: viewModel
-                )
+            SelectUserBottomBar(
+                isEditing: $isEditingUsers,
+                serverSelection: $serverSelection,
+                areUsersSelected: selectedUsers.isNotEmpty,
+                viewModel: viewModel,
+                userCount: gridItems.count,
+                onDelete: {
+                    isPresentingConfirmDeleteUsers = true
+                }
+            ) {
+                if selectedUsers.count == users.count {
+                    selectedUsers.removeAll()
+                } else {
+                    selectedUsers.insert(contentsOf: users)
+                }
             }
+            .focusSection()
         }
         .animation(.linear(duration: 0.1), value: scrollViewOffset)
         .background {
-            if let splashScreenImageSource {
+            if let splashScreenImageSource, selectUserUseSplashscreen {
                 ZStack {
-                    Color.clear
-
                     ImageView(splashScreenImageSource)
                         .aspectRatio(contentMode: .fill)
                         .id(splashScreenImageSource)
@@ -221,40 +304,63 @@ struct SelectUserView: View {
         }
     }
 
-    // MARK: emptyView
+    // MARK: - Empty View
 
     @ViewBuilder
     private var emptyView: some View {
-        ZStack {
-            VStack {
-                Image(.jellyfinBlobBlue)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: 100)
-                    .edgePadding()
+        VStack(spacing: 50) {
+            L10n.connectToJellyfinServerStart.text
+                .font(.body)
+                .frame(minWidth: 50, maxWidth: 500)
+                .multilineTextAlignment(.center)
 
-                Color.clear
+            Button {
+                router.route(to: \.connectToServer)
+            } label: {
+                L10n.connect.text
+                    .font(.callout)
+                    .fontWeight(.bold)
+                    .frame(width: 400, height: 75)
+                    .background(Color.jellyfinPurple)
             }
-
-            VStack(spacing: 50) {
-                L10n.connectToJellyfinServerStart.text
-                    .font(.body)
-                    .frame(minWidth: 50, maxWidth: 500)
-                    .multilineTextAlignment(.center)
-
-                Button {
-                    router.route(to: \.connectToServer)
-                } label: {
-                    L10n.connect.text
-                        .font(.callout)
-                        .fontWeight(.bold)
-                        .frame(width: 400, height: 75)
-                        .background(Color.jellyfinPurple)
-                }
-                .buttonStyle(.card)
-            }
+            .buttonStyle(.card)
         }
     }
+
+    // MARK: - Functions
+
+    private func didDelete(_ server: ServerState) {
+        viewModel.send(.getServers)
+
+        if case let SelectUserServerSelection.server(id: id) = serverSelection, server.id == id {
+            if viewModel.servers.keys.count == 1, let first = viewModel.servers.keys.first {
+                serverSelection = .server(id: first.id)
+            } else {
+                serverSelection = .all
+            }
+        }
+
+        setSplashScreenImageSource()
+    }
+
+    // MARK: - Did Appear
+
+    private func didAppear() {
+        viewModel.send(.getServers)
+
+        setSplashScreenImageSource()
+    }
+
+    // MARK: - Set Splash Screen Image Source
+
+    private func setSplashScreenImageSource() {
+        splashScreenImageSource = makeSplashScreenImageSource(
+            serverSelection: serverSelection,
+            allServersSelection: .all
+        )
+    }
+
+    // MARK: - Body
 
     var body: some View {
         ZStack {
@@ -265,31 +371,25 @@ struct SelectUserView: View {
             }
         }
         .ignoresSafeArea()
+        .navigationBarBranding()
         .onAppear {
-            viewModel.send(.getServers)
-
-            splashScreenImageSource = makeSplashScreenImageSource(
-                serverSelection: serverSelection,
-                allServersSelection: .all
-            )
-
-//            gridItems = OrderedSet(
-//                (0 ..< 20)
-//                    .map { i in
-//                        UserState(accessToken: "", id: "\(i)", serverID: "", username: "\(i)")
-//                    }
-//                    .map { u in
-//                        UserGridItem.user(u, server: .init(urls: [], currentURL: URL(string: "/")!, name: "Test", id: "", usersIDs: []))
-//                    }
-//            )
+            didAppear()
+        }
+        .onChange(of: isEditingUsers) { _, newValue in
+            guard !newValue else { return }
+            selectedUsers.removeAll()
         }
         .onChange(of: serverSelection) { _, newValue in
             gridItems = makeGridItems(for: newValue)
 
-            splashScreenImageSource = makeSplashScreenImageSource(
-                serverSelection: newValue,
-                allServersSelection: .all
-            )
+            setSplashScreenImageSource()
+        }
+        .onChange(of: isPresentingLocalPin) { _, newValue in
+            if newValue {
+                pin = ""
+            } else {
+                selectedUsers.removeAll()
+            }
         }
         .onChange(of: viewModel.servers) { _, _ in
             gridItems = makeGridItems(for: serverSelection)
@@ -303,40 +403,65 @@ struct SelectUserView: View {
             switch event {
             case let .error(eventError):
                 self.error = eventError
-                self.isPresentingError = true
             case let .signedIn(user):
                 Defaults[.lastSignedInUserID] = .signedIn(userID: user.id)
                 Container.shared.currentUserSession.reset()
                 Notifications[.didSignIn].post()
             }
         }
-        .onNotification(.didConnectToServer) { notification in
-            if let server = notification.object as? ServerState {
-                viewModel.send(.getServers)
-                serverSelection = .server(id: server.id)
-            }
-        }
-        .onNotification(.didChangeCurrentServerURL) { notification in
-            if let server = notification.object as? ServerState {
-                viewModel.send(.getServers)
-                serverSelection = .server(id: server.id)
-            }
-        }
-        .onNotification(.didDeleteServer) { notification in
+        .onNotification(.didConnectToServer) { server in
             viewModel.send(.getServers)
-
-            if let server = notification.object as? ServerState {
-                if case let SelectUserServerSelection.server(id: id) = serverSelection, server.id == id {
-                    if viewModel.servers.keys.count == 1, let first = viewModel.servers.keys.first {
-                        serverSelection = .server(id: first.id)
-                    } else {
-                        serverSelection = .all
-                    }
-                }
-
-                // change splash screen selection if necessary
-//                selectUserAllServersSplashscreen = serverSelection
+            serverSelection = .server(id: server.id)
+        }
+        .onNotification(.didChangeCurrentServerURL) { server in
+            viewModel.send(.getServers)
+            serverSelection = .server(id: server.id)
+        }
+        .onNotification(.didDeleteServer) { server in
+            didDelete(server)
+        }
+        .confirmationDialog(
+            Text(L10n.deleteUser),
+            isPresented: $isPresentingConfirmDeleteUsers,
+            presenting: selectedUsers
+        ) { selectedUsers in
+            Button(L10n.delete, role: .destructive) {
+                viewModel.send(.deleteUsers(Array(selectedUsers)))
+                isEditingUsers = false
+            }
+        } message: { selectedUsers in
+            if selectedUsers.count == 1, let first = selectedUsers.first {
+                Text(L10n.deleteUserSingleConfirmation(first.username))
+            } else {
+                Text(L10n.deleteUserMultipleConfirmation(selectedUsers.count))
             }
         }
+        .alert(L10n.signIn, isPresented: $isPresentingLocalPin) {
+
+            // TODO: Verify on tvOS 18
+            // https://forums.developer.apple.com/forums/thread/739545
+            // TextField(L10n.pin, text: $pin)
+            TextField(text: $pin) {}
+                .keyboardType(.numberPad)
+
+            Button(L10n.signIn) {
+                guard let user = selectedUsers.first else {
+                    assertionFailure("User not selected")
+                    return
+                }
+                select(user: user, needsPin: false)
+            }
+
+            Button(L10n.cancel, role: .cancel) {}
+        } message: {
+            if let user = selectedUsers.first, user.pinHint.isNotEmpty {
+                Text(user.pinHint)
+            } else {
+                let username = selectedUsers.first?.username ?? .emptyDash
+
+                Text(L10n.enterPinForUser(username))
+            }
+        }
+        .errorMessage($error)
     }
 }

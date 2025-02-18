@@ -3,13 +3,13 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import CollectionHStack
 import Defaults
+import IdentifiedCollections
 import JellyfinAPI
-import OrderedCollections
 import SwiftUI
 
 // TODO: rename `AboutItemView`
@@ -22,29 +22,34 @@ extension ItemView {
 
     struct AboutView: View {
 
-        private enum AboutViewItem: Hashable {
-
+        private enum AboutViewItem: Identifiable {
             case image
             case overview
             case mediaSource(MediaSourceInfo)
             case ratings
-        }
 
-        @Default(.accentColor)
-        private var accentColor
+            var id: String? {
+                switch self {
+                case .image:
+                    return "image"
+                case .overview:
+                    return "overview"
+                case let .mediaSource(source):
+                    return source.id
+                case .ratings:
+                    return "ratings"
+                }
+            }
+        }
 
         @ObservedObject
         var viewModel: ItemViewModel
 
         @State
         private var contentSize: CGSize = .zero
-        @State
-        private var items: OrderedSet<AboutViewItem>
 
-        init(viewModel: ItemViewModel) {
-            self.viewModel = viewModel
-
-            var items: OrderedSet<AboutViewItem> = [
+        private var items: [AboutViewItem] {
+            var items: [AboutViewItem] = [
                 .image,
                 .overview,
             ]
@@ -57,7 +62,11 @@ extension ItemView {
                 items.append(.ratings)
             }
 
-            self._items = State(initialValue: items)
+            return items
+        }
+
+        init(viewModel: ItemViewModel) {
+            self.viewModel = viewModel
         }
 
         // TODO: break out into a general solution for general use?
@@ -121,7 +130,10 @@ extension ItemView {
                     .accessibility(addTraits: [.isHeader])
                     .edgePadding(.horizontal)
 
-                CollectionHStack($items, variadicWidths: true) { item in
+                CollectionHStack(
+                    uniqueElements: items,
+                    variadicWidths: true
+                ) { item in
                     switch item {
                     case .image:
                         imageView
@@ -145,6 +157,7 @@ extension ItemView {
                 .scrollBehavior(.continuousLeadingEdge)
             }
             .trackingSize($contentSize)
+            .id(viewModel.item.hashValue)
         }
     }
 }

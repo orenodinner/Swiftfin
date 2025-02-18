@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Defaults
@@ -52,20 +52,19 @@ extension SeriesEpisodeSelector {
             Button {
                 onSelect()
             } label: {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 8) {
                     subHeaderView
 
                     headerView
 
                     contentView
-                        // Removing the alignment below makes the text center
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     L10n.seeMore.text
                         .font(.caption.weight(.light))
                         .foregroundStyle(accentColor)
                 }
-                .padding(5)
+                .padding()
             }
             .buttonStyle(.card)
         }

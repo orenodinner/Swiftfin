@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import JellyfinAPI
@@ -26,7 +26,7 @@ final class SettingsCoordinator: NavigationCoordinatable {
     var playbackQualitySettings = makePlaybackQualitySettings
     @Route(.push)
     var quickConnect = makeQuickConnectAuthorize
-    @Route(.push)
+    @Route(.modal)
     var resetUserPassword = makeResetUserPassword
     @Route(.push)
     var localSecurity = makeLocalSecurity
@@ -44,31 +44,23 @@ final class SettingsCoordinator: NavigationCoordinatable {
     @Route(.push)
     var indicatorSettings = makeIndicatorSettings
     @Route(.push)
+    var itemViewAttributes = makeItemViewAttributes
+    @Route(.push)
     var serverConnection = makeServerConnection
     @Route(.push)
     var videoPlayerSettings = makeVideoPlayerSettings
     @Route(.push)
     var customDeviceProfileSettings = makeCustomDeviceProfileSettings
-
-    @Route(.push)
-    var userDashboard = makeUserDashboard
-    @Route(.push)
-    var activeSessions = makeActiveSessions
-    @Route(.push)
-    var activeDeviceDetails = makeActiveDeviceDetails
     @Route(.modal)
     var itemOverviewView = makeItemOverviewView
-    @Route(.push)
-    var tasks = makeTasks
-    @Route(.push)
-    var editScheduledTask = makeEditScheduledTask
-    @Route(.push)
-    var serverLogs = makeServerLogs
 
     @Route(.modal)
     var editCustomDeviceProfile = makeEditCustomDeviceProfile
     @Route(.modal)
     var createCustomDeviceProfile = makeCreateCustomDeviceProfile
+
+    @Route(.push)
+    var adminDashboard = makeAdminDashboard
 
     #if DEBUG
     @Route(.push)
@@ -82,8 +74,6 @@ final class SettingsCoordinator: NavigationCoordinatable {
     @Route(.modal)
     var experimentalSettings = makeExperimentalSettings
     @Route(.modal)
-    var indicatorSettings = makeIndicatorSettings
-    @Route(.modal)
     var log = makeLog
     @Route(.modal)
     var serverDetail = makeServerDetail
@@ -91,6 +81,8 @@ final class SettingsCoordinator: NavigationCoordinatable {
     var videoPlayerSettings = makeVideoPlayerSettings
     @Route(.modal)
     var playbackQualitySettings = makePlaybackQualitySettings
+    @Route(.modal)
+    var userProfile = makeUserProfileSettings
     #endif
 
     #if os(iOS)
@@ -110,7 +102,8 @@ final class SettingsCoordinator: NavigationCoordinatable {
     }
 
     func makeEditCustomDeviceProfile(profile: Binding<CustomDeviceProfile>)
-    -> NavigationViewCoordinator<EditCustomDeviceProfileCoordinator> {
+        -> NavigationViewCoordinator<EditCustomDeviceProfileCoordinator>
+    {
         NavigationViewCoordinator(EditCustomDeviceProfileCoordinator(profile: profile))
     }
 
@@ -123,9 +116,10 @@ final class SettingsCoordinator: NavigationCoordinatable {
         QuickConnectAuthorizeView()
     }
 
-    @ViewBuilder
-    func makeResetUserPassword() -> some View {
-        ResetUserPasswordView()
+    func makeResetUserPassword(userID: String) -> NavigationViewCoordinator<BasicNavigationViewCoordinator> {
+        NavigationViewCoordinator {
+            ResetUserPasswordView(userID: userID, requiresCurrentPassword: true)
+        }
     }
 
     @ViewBuilder
@@ -133,8 +127,8 @@ final class SettingsCoordinator: NavigationCoordinatable {
         UserLocalSecurityView()
     }
 
-    func makePhotoPicker(viewModel: SettingsViewModel) -> NavigationViewCoordinator<UserProfileImageCoordinator> {
-        NavigationViewCoordinator(UserProfileImageCoordinator())
+    func makePhotoPicker(viewModel: UserProfileImageViewModel) -> NavigationViewCoordinator<UserProfileImageCoordinator> {
+        NavigationViewCoordinator(UserProfileImageCoordinator(viewModel: viewModel))
     }
 
     @ViewBuilder
@@ -158,44 +152,20 @@ final class SettingsCoordinator: NavigationCoordinatable {
     }
 
     @ViewBuilder
+    func makeItemViewAttributes(selection: Binding<[ItemViewAttribute]>) -> some View {
+        OrderedSectionSelectorView(selection: selection, sources: ItemViewAttribute.allCases)
+            .navigationTitle(L10n.mediaAttributes.localizedCapitalized)
+    }
+
+    @ViewBuilder
     func makeServerConnection(server: ServerState) -> some View {
         EditServerView(server: server)
-    }
-
-    @ViewBuilder
-    func makeUserDashboard() -> some View {
-        UserDashboardView()
-    }
-
-    @ViewBuilder
-    func makeActiveSessions() -> some View {
-        ActiveSessionsView()
-    }
-
-    @ViewBuilder
-    func makeActiveDeviceDetails(box: BindingBox<SessionInfo?>) -> some View {
-        ActiveSessionDetailView(box: box)
     }
 
     func makeItemOverviewView(item: BaseItemDto) -> NavigationViewCoordinator<BasicNavigationViewCoordinator> {
         NavigationViewCoordinator {
             ItemOverviewView(item: item)
         }
-    }
-
-    @ViewBuilder
-    func makeTasks() -> some View {
-        ScheduledTasksView()
-    }
-
-    @ViewBuilder
-    func makeEditScheduledTask(observer: ServerTaskObserver) -> some View {
-        EditScheduledTaskView(observer: observer)
-    }
-
-    @ViewBuilder
-    func makeServerLogs() -> some View {
-        ServerLogsView()
     }
 
     func makeItemFilterDrawerSelector(selection: Binding<[ItemFilterType]>) -> some View {
@@ -207,23 +177,38 @@ final class SettingsCoordinator: NavigationCoordinatable {
         VideoPlayerSettingsCoordinator()
     }
 
+    @ViewBuilder
+    func makeAdminDashboard() -> some View {
+        AdminDashboardCoordinator().view()
+    }
+
     #if DEBUG
     @ViewBuilder
     func makeDebugSettings() -> some View {
         DebugSettingsView()
     }
     #endif
-
     #endif
 
     #if os(tvOS)
-    func makeCustomizeViewsSettings() -> NavigationViewCoordinator<BasicNavigationViewCoordinator> {
+
+    // MARK: - User Profile View
+
+    func makeUserProfileSettings(viewModel: SettingsViewModel) -> NavigationViewCoordinator<UserProfileSettingsCoordinator> {
         NavigationViewCoordinator(
-            BasicNavigationViewCoordinator {
-                CustomizeViewsSettings()
-            }
+            UserProfileSettingsCoordinator(viewModel: viewModel)
         )
     }
+
+    // MARK: - Customize Settings View
+
+    func makeCustomizeViewsSettings() -> NavigationViewCoordinator<CustomizeSettingsCoordinator> {
+        NavigationViewCoordinator(
+            CustomizeSettingsCoordinator()
+        )
+    }
+
+    // MARK: - Experimental Settings View
 
     func makeExperimentalSettings() -> NavigationViewCoordinator<BasicNavigationViewCoordinator> {
         NavigationViewCoordinator(
@@ -233,11 +218,15 @@ final class SettingsCoordinator: NavigationCoordinatable {
         )
     }
 
+    // MARK: - Poster Indicator Settings View
+
     func makeIndicatorSettings() -> NavigationViewCoordinator<BasicNavigationViewCoordinator> {
         NavigationViewCoordinator {
             IndicatorSettingsView()
         }
     }
+
+    // MARK: - Server Settings View
 
     func makeServerDetail(server: ServerState) -> NavigationViewCoordinator<BasicNavigationViewCoordinator> {
         NavigationViewCoordinator {
@@ -245,11 +234,15 @@ final class SettingsCoordinator: NavigationCoordinatable {
         }
     }
 
+    // MARK: - Video Player Settings View
+
     func makeVideoPlayerSettings() -> NavigationViewCoordinator<VideoPlayerSettingsCoordinator> {
         NavigationViewCoordinator(
             VideoPlayerSettingsCoordinator()
         )
     }
+
+    // MARK: - Playback Settings View
 
     func makePlaybackQualitySettings() -> NavigationViewCoordinator<PlaybackQualitySettingsCoordinator> {
         NavigationViewCoordinator(

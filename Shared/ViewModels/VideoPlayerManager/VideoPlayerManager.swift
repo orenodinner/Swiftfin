@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import AVFoundation
@@ -213,8 +213,10 @@ class VideoPlayerManager: ViewModel {
 
     func sendStopReport() {
 
+        // TODO: This entire system is being redone in other PRs,
+        //       can ignore the fact this is commented out for now.
         let ids = ["itemID": currentViewModel.item.id, "seriesID": currentViewModel.item.parentID]
-        Notifications[.itemMetadataDidChange].post(object: ids)
+//        Notifications[.itemMetadataDidChange].post(ids)
 
         #if DEBUG
         guard Defaults[.sendProgressReports] else { return }

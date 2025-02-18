@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import CollectionVGrid
@@ -22,7 +22,7 @@ struct ChannelLibraryView: View {
     @ViewBuilder
     private var contentView: some View {
         CollectionVGrid(
-            $viewModel.elements,
+            uniqueElements: viewModel.elements,
             layout: .columns(3, insets: .init(0), itemSpacing: 25, lineSpacing: 25)
         ) { channel in
             WideChannelGridItem(channel: channel)
@@ -40,7 +40,7 @@ struct ChannelLibraryView: View {
     }
 
     var body: some View {
-        WrappedView {
+        ZStack {
             switch viewModel.state {
             case .content:
                 if viewModel.elements.isEmpty {
@@ -49,11 +49,15 @@ struct ChannelLibraryView: View {
                     contentView
                 }
             case let .error(error):
-                Text(error.localizedDescription)
+                ErrorView(error: error)
+                    .onRetry {
+                        viewModel.send(.refresh)
+                    }
             case .initial, .refreshing:
                 ProgressView()
             }
         }
+        .animation(.linear(duration: 0.1), value: viewModel.state)
         .ignoresSafeArea()
         .onFirstAppear {
             if viewModel.state == .initial {

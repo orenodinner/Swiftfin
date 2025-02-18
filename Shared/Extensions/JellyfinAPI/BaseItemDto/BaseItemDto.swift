@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Algorithms
@@ -22,8 +22,16 @@ extension BaseItemDto: Displayable {
 }
 
 extension BaseItemDto: LibraryParent {
+
     var libraryType: BaseItemKind? {
         type
+    }
+}
+
+extension BaseItemDto: LibraryIdentifiable {
+
+    var unwrappedIDHashOrZero: Int {
+        id?.hashValue ?? 0
     }
 }
 

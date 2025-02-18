@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Defaults
@@ -110,25 +110,26 @@ struct SearchView: View {
     }
 
     var body: some View {
-        WrappedView {
-            Group {
-                switch viewModel.state {
-                case let .error(error):
-                    Text(error.localizedDescription)
-                case .initial:
-                    suggestionsView
-                case .content:
-                    if viewModel.hasNoResults {
-                        L10n.noResults.text
-                    } else {
-                        resultsView
-                    }
-                case .searching:
-                    ProgressView()
+        ZStack {
+            switch viewModel.state {
+            case .initial:
+                suggestionsView
+            case .content:
+                if viewModel.hasNoResults {
+                    L10n.noResults.text
+                } else {
+                    resultsView
                 }
+            case let .error(error):
+                ErrorView(error: error)
+                    .onRetry {
+                        viewModel.send(.search(query: searchQuery))
+                    }
+            case .searching:
+                ProgressView()
             }
-            .transition(.opacity.animation(.linear(duration: 0.2)))
         }
+        .animation(.linear(duration: 0.1), value: viewModel.state)
         .ignoresSafeArea(edges: [.bottom, .horizontal])
         .onFirstAppear {
             viewModel.send(.getSuggestions)

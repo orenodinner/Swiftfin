@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Defaults
@@ -24,22 +24,25 @@ struct NavigationBarFilterDrawer: View {
                 if viewModel.currentFilters.hasFilters {
                     Menu {
                         Button(L10n.reset, role: .destructive) {
-                            viewModel.currentFilters = .default
+                            viewModel.send(.reset())
                         }
                     } label: {
-                        FilterDrawerButton(systemName: "line.3.horizontal.decrease.circle.fill", activated: true)
+                        FilterDrawerButton(systemName: "line.3.horizontal.decrease.circle.fill")
+                            .environment(\.isSelected, true)
                     }
                 }
 
                 ForEach(filterTypes, id: \.self) { type in
                     FilterDrawerButton(
-                        title: type.displayTitle,
-                        activated: viewModel.currentFilters[keyPath: type.collectionAnyKeyPath] != ItemFilterCollection
-                            .default[keyPath: type.collectionAnyKeyPath]
+                        title: type.displayTitle
                     )
                     .onSelect {
                         onSelect(.init(type: type, viewModel: viewModel))
                     }
+                    .environment(
+                        \.isSelected,
+                        viewModel.isFilterSelected(type: type)
+                    )
                 }
             }
             .padding(.horizontal)

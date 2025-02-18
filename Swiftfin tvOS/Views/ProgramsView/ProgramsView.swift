@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import JellyfinAPI
@@ -78,7 +78,7 @@ struct ProgramsView: View {
     }
 
     var body: some View {
-        WrappedView {
+        ZStack {
             switch programsViewModel.state {
             case .content:
                 if programsViewModel.hasNoResults {
@@ -87,11 +87,15 @@ struct ProgramsView: View {
                     contentView
                 }
             case let .error(error):
-                Text(error.localizedDescription)
+                ErrorView(error: error)
+                    .onRetry {
+                        programsViewModel.send(.refresh)
+                    }
             case .initial, .refreshing:
                 ProgressView()
             }
         }
+        .animation(.linear(duration: 0.1), value: programsViewModel.state)
         .ignoresSafeArea(edges: [.bottom, .horizontal])
         .onFirstAppear {
             if programsViewModel.state == .initial {

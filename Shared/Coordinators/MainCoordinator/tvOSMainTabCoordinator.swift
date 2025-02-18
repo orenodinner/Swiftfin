@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Foundation
@@ -48,7 +48,9 @@ final class MainTabCoordinator: TabCoordinatable {
     }
 
     func makeTVShows() -> NavigationViewCoordinator<LibraryCoordinator<BaseItemDto>> {
-        let viewModel = ItemTypeLibraryViewModel(itemTypes: [.series])
+        let viewModel = ItemLibraryViewModel(
+            filters: .init(itemTypes: [.series])
+        )
         return NavigationViewCoordinator(LibraryCoordinator(viewModel: viewModel))
     }
 
@@ -62,7 +64,9 @@ final class MainTabCoordinator: TabCoordinatable {
     }
 
     func makeMovies() -> NavigationViewCoordinator<LibraryCoordinator<BaseItemDto>> {
-        let viewModel = ItemTypeLibraryViewModel(itemTypes: [.movie])
+        let viewModel = ItemLibraryViewModel(
+            filters: .init(itemTypes: [.movie])
+        )
         return NavigationViewCoordinator(LibraryCoordinator(viewModel: viewModel))
     }
 

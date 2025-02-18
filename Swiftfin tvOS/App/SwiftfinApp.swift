@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import CoreStore
@@ -47,21 +47,26 @@ struct SwiftfinApp: App {
             return mimeType.contains("svg") ? ImageDecoders.Empty() : nil
         }
 
-        ImagePipeline.shared = .Swiftfin.default
+        ImagePipeline.shared = .Swiftfin.posters
 
         // UIKit
 
         UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: UIColor.label]
+
+        // don't keep last user id
+        if Defaults[.signOutOnClose] {
+            Defaults[.lastSignedInUserID] = .signedOut
+        }
     }
 
     var body: some Scene {
         WindowGroup {
             MainCoordinator()
                 .view()
-                .onNotification(UIApplication.didEnterBackgroundNotification) { _ in
+                .onNotification(.applicationDidEnterBackground) {
                     Defaults[.backgroundTimeStamp] = Date.now
                 }
-                .onNotification(UIApplication.willEnterForegroundNotification) { _ in
+                .onNotification(.applicationWillEnterForeground) {
                     // TODO: needs to check if any background playback is happening
                     let backgroundedInterval = Date.now.timeIntervalSince(Defaults[.backgroundTimeStamp])
 

@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Defaults
@@ -20,32 +20,34 @@ extension LetterPickerBar {
         private var isSelected
 
         private let letter: ItemLetter
+        private let size: CGFloat
         private let viewModel: FilterViewModel
 
-        init(letter: ItemLetter, viewModel: FilterViewModel) {
+        init(letter: ItemLetter, size: CGFloat, viewModel: FilterViewModel) {
             self.letter = letter
+            self.size = size
             self.viewModel = viewModel
         }
 
         var body: some View {
             Button {
-                if !viewModel.currentFilters.letter.contains(letter) {
-                    viewModel.currentFilters.letter = [ItemLetter(stringLiteral: letter.value)]
+                if viewModel.currentFilters.letter.contains(letter) {
+                    viewModel.send(.update(.letter, []))
                 } else {
-                    viewModel.currentFilters.letter = []
+                    viewModel.send(.update(.letter, [ItemLetter(stringLiteral: letter.value).asAnyItemFilter]))
                 }
             } label: {
                 ZStack {
                     RoundedRectangle(cornerRadius: 5)
+                        .frame(width: size, height: size)
                         .foregroundStyle(isSelected ? accentColor : Color.clear)
 
                     Text(letter.value)
                         .font(.headline)
                         .foregroundStyle(isSelected ? accentColor.overlayColor : accentColor)
+                        .frame(width: size, height: size, alignment: .center)
                 }
-                .frame(width: 20, height: 20)
             }
-            .frame(width: 50, height: 20)
         }
     }
 }

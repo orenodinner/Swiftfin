@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import CoreStore
@@ -50,7 +50,7 @@ class ServerConnectionViewModel: ViewModel {
                 UserDefaults.userSuite(id: user.id).removeAll()
             }
 
-            Notifications[.didDeleteServer].post(object: server)
+            Notifications[.didDeleteServer].post(server)
         } catch {
             logger.critical("Unable to delete server: \(server.name)")
         }
@@ -67,7 +67,7 @@ class ServerConnectionViewModel: ViewModel {
                 return storedServer.state
             }
 
-            Notifications[.didChangeCurrentServerURL].post(object: newState)
+            Notifications[.didChangeCurrentServerURL].post(newState)
 
             self.server = newState
         } catch {

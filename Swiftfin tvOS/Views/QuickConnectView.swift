@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import JellyfinAPI
@@ -25,17 +25,14 @@ struct QuickConnectView: View {
 
     private func pollingView(code: String) -> some View {
         VStack(alignment: .leading, spacing: 20) {
-
-            // TODO: change strings so that numbers are removed
-            //       and use `BulletedList`
-            //       - also probably rephrase/change steps
-
-            L10n.quickConnectStep1.text
-
-            L10n.quickConnectStep2.text
-
-            L10n.quickConnectStep3.text
-                .padding(.bottom)
+            BulletedList {
+                L10n.quickConnectStep1.text
+                    .padding(.bottom)
+                L10n.quickConnectStep2.text
+                    .padding(.bottom)
+                L10n.quickConnectStep3.text
+                    .padding(.bottom)
+            }
 
             Text(code)
                 .tracking(10)
@@ -50,7 +47,7 @@ struct QuickConnectView: View {
     }
 
     var body: some View {
-        WrappedView {
+        ZStack {
             switch viewModel.state {
             case .idle, .authenticated:
                 Color.clear
@@ -59,10 +56,13 @@ struct QuickConnectView: View {
             case let .polling(code):
                 pollingView(code: code)
             case let .error(error):
-                Text(error.localizedDescription)
-//                ErrorView(error: error)
+                ErrorView(error: error)
+                    .onRetry {
+                        viewModel.start()
+                    }
             }
         }
+        .animation(.linear(duration: 0.1), value: viewModel.state)
         .edgePadding()
         .navigationTitle(L10n.quickConnect)
         .onFirstAppear {

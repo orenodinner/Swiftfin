@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Defaults
@@ -59,13 +59,13 @@ struct AppSettingsView: View {
 
             Section {
 
-                Toggle("Use splashscreen", isOn: $selectUserUseSplashscreen)
+                Toggle(L10n.useSplashscreen, isOn: $selectUserUseSplashscreen)
 
                 if selectUserUseSplashscreen {
-                    Picker("Servers", selection: $selectUserAllServersSplashscreen) {
+                    Picker(L10n.servers, selection: $selectUserAllServersSplashscreen) {
 
                         Section {
-                            Label("Random", systemImage: "dice.fill")
+                            Label(L10n.random, systemImage: "dice.fill")
                                 .tag(SelectUserServerSelection.all)
                         }
 
@@ -76,10 +76,10 @@ struct AppSettingsView: View {
                     }
                 }
             } header: {
-                Text("Splashscreen")
+                Text(L10n.splashscreen)
             } footer: {
                 if selectUserUseSplashscreen {
-                    Text("When All Servers is selected, use the splashscreen from a single server or a random server")
+                    Text(L10n.splashscreenFooter)
                 }
             }
 

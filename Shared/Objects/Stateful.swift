@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Foundation
@@ -16,7 +16,7 @@ import OrderedCollections
 //       parent class actions
 // TODO: official way for a cleaner `respond` method so it doesn't have all Task
 //       construction and get bloated
-// TODO: make Action: Hashable just for consistency
+// TODO: move backgroundStates to just a `Set`
 
 protocol Stateful: AnyObject {
 

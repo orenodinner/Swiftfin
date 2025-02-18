@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Combine
@@ -94,8 +94,12 @@ extension StoredValue {
 
             let domain = key.domain ?? "none"
 
+            let ownerFilter: Where<AnyStoredData> = Where(\.$ownerID == key.ownerID)
+            let keyFilter: Where<AnyStoredData> = Where(\.$key == key.name)
+            let domainFilter: Where<AnyStoredData> = Where(\.$domain == domain)
+
             let clause = From<AnyStoredData>()
-                .where(\.$ownerID == key.ownerID && \.$key == key.name && \.$domain == domain)
+                .where(ownerFilter && keyFilter && domainFilter)
 
             if let values = try? SwiftfinStore.dataStack.fetchAll(clause), let first = values.first {
                 let publisher = first.asPublisher(in: SwiftfinStore.dataStack)

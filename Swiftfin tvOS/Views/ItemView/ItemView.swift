@@ -3,7 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Copyright (c) 2024 Jellyfin & Jellyfin Contributors
+// Copyright (c) 2025 Jellyfin & Jellyfin Contributors
 //
 
 import Defaults
@@ -52,17 +52,20 @@ struct ItemView: View {
     }
 
     var body: some View {
-        WrappedView {
+        ZStack {
             switch viewModel.state {
             case .content:
                 contentView
             case let .error(error):
-                Text(error.localizedDescription)
+                ErrorView(error: error)
+                    .onRetry {
+                        viewModel.send(.refresh)
+                    }
             case .initial, .refreshing:
                 ProgressView()
             }
         }
-        .transition(.opacity.animation(.linear(duration: 0.2)))
+        .animation(.linear(duration: 0.1), value: viewModel.state)
         .onFirstAppear {
             viewModel.send(.refresh)
         }
