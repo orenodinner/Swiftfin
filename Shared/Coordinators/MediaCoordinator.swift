@@ -42,8 +42,8 @@ final class MediaCoordinator: NavigationCoordinatable {
         LibraryCoordinator(viewModel: viewModel)
     }
 
-    func makeActors() -> NavigationViewCoordinator<ActorsCoordinator> {
-        NavigationViewCoordinator(ActorsCoordinator())
+    func makeActors() -> ActorsCoordinator {
+        ActorsCoordinator()
     }
 
     func makeDownloads() -> DownloadListCoordinator {
