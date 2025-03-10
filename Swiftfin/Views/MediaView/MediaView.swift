@@ -42,6 +42,8 @@ struct MediaView: View {
             MediaItem(viewModel: viewModel, type: mediaType)
                 .onSelect {
                     switch mediaType {
+                    case .actors:
+                        router.route(to: \.actors)
                     case let .collectionFolder(item):
                         let viewModel = ItemLibraryViewModel(
                             parent: item,
