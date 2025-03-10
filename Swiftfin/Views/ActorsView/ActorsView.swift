@@ -10,13 +10,13 @@ import JellyfinAPI
 import SwiftUI
 
 struct ActorsView: View {
-    
+
     @EnvironmentObject
     private var router: ActorsCoordinator.Router
-    
+
     @StateObject
     private var viewModel: ActorsViewModel
-    
+
     init() {
         let viewModel = ActorsViewModel(
             title: L10n.actor,
@@ -25,7 +25,7 @@ struct ActorsView: View {
         )
         self._viewModel = StateObject(wrappedValue: viewModel)
     }
-    
+
     var body: some View {
         PagingLibraryView(viewModel: viewModel)
             .navigationTitle(L10n.actor)

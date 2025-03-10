@@ -12,12 +12,12 @@ import Stinsen
 import SwiftUI
 
 final class ActorsCoordinator: NavigationCoordinatable {
-    
+
     let stack = NavigationStack(initial: \ActorsCoordinator.start)
-    
+
     @Root
     var start = makeStart
-    
+
     #if os(tvOS)
     @Route(.modal)
     var item = makeItem
@@ -29,12 +29,12 @@ final class ActorsCoordinator: NavigationCoordinatable {
     @Route(.push)
     var library = makeLibrary
     #endif
-    
+
     #if os(tvOS)
     func makeItem(item: BaseItemDto) -> NavigationViewCoordinator<ItemCoordinator> {
         NavigationViewCoordinator(ItemCoordinator(item: item))
     }
-    
+
     func makeLibrary(viewModel: PagingLibraryViewModel<BaseItemDto>) -> NavigationViewCoordinator<LibraryCoordinator<BaseItemDto>> {
         NavigationViewCoordinator(LibraryCoordinator<BaseItemDto>(viewModel: viewModel))
     }
@@ -42,12 +42,12 @@ final class ActorsCoordinator: NavigationCoordinatable {
     func makeItem(item: BaseItemDto) -> ItemCoordinator {
         ItemCoordinator(item: item)
     }
-    
+
     func makeLibrary(viewModel: PagingLibraryViewModel<BaseItemDto>) -> LibraryCoordinator<BaseItemDto> {
         LibraryCoordinator<BaseItemDto>(viewModel: viewModel)
     }
     #endif
-    
+
     @ViewBuilder
     func makeStart() -> some View {
         ActorsView()

@@ -45,7 +45,7 @@ final class MediaCoordinator: NavigationCoordinatable {
     func makeActors() -> NavigationViewCoordinator<ActorsCoordinator> {
         NavigationViewCoordinator(ActorsCoordinator())
     }
-    
+
     func makeDownloads() -> DownloadListCoordinator {
         DownloadListCoordinator()
     }
